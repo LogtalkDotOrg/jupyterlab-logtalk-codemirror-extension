@@ -11,7 +11,7 @@ import {
 } from '@jupyterlab/codemirror';
 
 
-function prologMode() {
+function logtalkMode() {
   return {
     startState: function () {
       return {
@@ -91,30 +91,30 @@ function prologMode() {
 };
 
 
-function definePrologMode(code_mirror: any) {
+function defineLogtalkMode(code_mirror: any) {
   code_mirror.defineMode(
-    "prolog",
-    prologMode,
-    "Prolog");
+    "logtalk",
+    logtalkMode,
+    "Logtalk");
 
-  code_mirror.defineMIME('text/x-prolog', 'prolog');
+  code_mirror.defineMIME('text/x-logtalk', 'logtalk');
 
   code_mirror.modeInfo.push({
-    ext: ['pl'],
-    mime: 'text/x-prolog',
-    mode: 'prolog',
-    name: 'Prolog'
+    ext: ['lgt', 'logtalk'],
+    mime: 'text/x-logtalk',
+    mode: 'logtalk',
+    name: 'Logtalk'
   });
 }
 
 
 const plugin: JupyterFrontEndPlugin<void> = {
-  id: 'jupyterlab_prolog_codemirror_extension:plugin',
+  id: 'jupyterlab_logtalk_codemirror_extension:plugin',
   autoStart: true,
   requires: [ICodeMirror],
   activate: (app: JupyterFrontEnd, codeMirror: ICodeMirror) => {
-    definePrologMode(codeMirror.CodeMirror);
-    console.log('JupyterLab extension jupyterlab_prolog_codemirror_extension is activated!');
+    defineLogtalkMode(codeMirror.CodeMirror);
+    console.log('JupyterLab extension jupyterlab_logtalk_codemirror_extension is activated!');
   }
 };
 

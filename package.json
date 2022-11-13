@@ -1,16 +1,16 @@
 {
-  "name": "jupyterlab_prolog_codemirror_extension",
-  "version": "0.0.2",
-  "description": "A JupyterLab extension providing a Prolog CodeMirror mode.",
+  "name": "jupyterlab_logtalk_codemirror_extension",
+  "version": "0.0.1",
+  "description": "A JupyterLab extension providing a Logtalk CodeMirror mode.",
   "keywords": [
     "jupyter",
     "jupyterlab",
     "jupyterlab-extension"
   ],
-  "homepage": "https://github.com/anbre/jupyterlab-prolog-codemirror-extension",
+  "homepage": "https://github.com/anbre/jupyterlab-logtalk-codemirror-extension",
   "license": "BSD-3-Clause",
   "author": {
-    "name": "Anne Brecklinghaus",
+    "name": "Anne Brecklinghaus and Paulo Moura",
     "email": ""
   },
   "files": [
@@ -33,7 +33,7 @@
     "clean": "jlpm clean:lib",
     "clean:lib": "rimraf lib tsconfig.tsbuildinfo",
     "clean:lintcache": "rimraf .eslintcache .stylelintcache",
-    "clean:labextension": "rimraf jupyterlab_prolog_codemirror_extension/labextension",
+    "clean:labextension": "rimraf jupyterlab_logtalk_codemirror_extension/labextension",
     "clean:all": "jlpm clean:lib && jlpm clean:labextension && jlpm clean:lintcache",
     "eslint": "jlpm eslint:check --fix",
     "eslint:check": "eslint . --cache --ext .ts,.tsx",
@@ -81,7 +81,7 @@
   },
   "jupyterlab": {
     "extension": true,
-    "outputDir": "jupyterlab_prolog_codemirror_extension/labextension"
+    "outputDir": "jupyterlab_logtalk_codemirror_extension/labextension"
   },
   "jupyter-releaser": {
     "hooks": {

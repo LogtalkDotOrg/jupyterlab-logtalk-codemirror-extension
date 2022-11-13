@@ -1,5 +1,5 @@
 """
-jupyterlab_prolog_codemirror_extension setup
+jupyterlab_logtalk_codemirror_extension setup
 """
 import json
 import sys
@@ -13,7 +13,7 @@ HERE = Path(__file__).parent.resolve()
 pkg_json = json.loads((HERE / "package.json").read_bytes())
 
 # The name of the project
-name = "jupyterlab_prolog_codemirror_extension"
+name = "jupyterlab_logtalk_codemirror_extension"
 
 lab_path = (HERE / pkg_json["jupyterlab"]["outputDir"])
 
