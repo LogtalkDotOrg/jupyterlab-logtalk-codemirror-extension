@@ -14,7 +14,7 @@ Also see the [Jupyter kernel for Logtalk](https://github.com/LogtalkDotOrg/logta
 To install the extension, execute:
 
 ```bash
-pip install jupyterlab_logtalk_codemirror_extension
+python3 -m pip install --upgrade jupyterlab_logtalk_codemirror_extension
 ```
 
 ## Uninstall
@@ -22,7 +22,7 @@ pip install jupyterlab_logtalk_codemirror_extension
 To remove the extension, execute:
 
 ```bash
-pip uninstall jupyterlab_logtalk_codemirror_extension
+python3 -m pip uninstall jupyterlab_logtalk_codemirror_extension
 ```
 
 ## Contributing
@@ -40,7 +40,7 @@ The `jlpm` command is JupyterLab's pinned version of [yarn](https://yarnpkg.com/
 # Clone the repo to your local environment
 # Change directory to the jupyterlab_logtalk_codemirror_extension directory
 # Install package in development mode
-pip install -e .
+python3 -m pip install -e .
 # Link your development version of the extension with JupyterLab
 jupyter labextension develop . --overwrite
 # Rebuild extension Typescript source after making changes
@@ -67,7 +67,7 @@ jupyter lab build --minimize=False
 ### Development uninstall
 
 ```bash
-pip uninstall jupyterlab_logtalk_codemirror_extension
+python3 -m pip uninstall jupyterlab_logtalk_codemirror_extension
 ```
 
 In development mode, you will also need to remove the symlink created by `jupyter labextension develop`
@@ -78,10 +78,10 @@ folder is located. Then you can remove the symlink named `jupyterlab_logtalk_cod
 
 This extension is available as a Python package on the [Python Package Index](https://pypi.org/). A new version of the package can be published in the following way:
 1. Install the requirements build and twine:
-  `pip install build twine`
+  `python3 -m pip install --upgrade build twine`
 2. Increase the version in [package.json](./package.json)
 3. Create the distribution files:
-  `python -m build`
+  `python3 -m build`
 4. Upload the package to PyPI:
   `twine upload dist/*`
 
