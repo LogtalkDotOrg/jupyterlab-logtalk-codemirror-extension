@@ -9,22 +9,6 @@ Also see the [Jupyter kernel for Logtalk](https://github.com/LogtalkDotOrg/logta
 
 - JupyterLab >= 3.1
 
-## Install
-
-To install the extension, execute:
-
-```bash
-python3 -m pip install --upgrade jupyterlab_logtalk_codemirror_extension
-```
-
-## Uninstall
-
-To remove the extension, execute:
-
-```bash
-python3 -m pip uninstall jupyterlab_logtalk_codemirror_extension
-```
-
 ## Contributing
 
 ### Development install
