@@ -17,7 +17,8 @@ const logtalkStreamParser: StreamParser<any> = {
     return {
       inComment: false,
       inString: false,
-      stringDelim: null
+      stringDelim: null,
+      stringType: null  // 'atom' for quoted atoms, 'string' for double-quoted terms
     };
   },
 
@@ -32,18 +33,44 @@ const logtalkStreamParser: StreamParser<any> = {
       return "comment";
     }
 
-    // Handle strings
+    // Handle strings and quoted atoms
     if (state.inString) {
       if (stream.match(state.stringDelim)) {
         state.inString = false;
+        const returnType = state.stringType === 'atom' ? 'atom' : 'string';
         state.stringDelim = null;
-        return "string";
+        state.stringType = null;
+        return returnType;
       }
-      if (stream.match(/\\./)) {
-        return "string";
+
+      // Control character escape sequences
+      if (stream.match(/\\[abfnrtv\\'"]/)) {
+        // Standard escape sequences: \a \b \f \n \r \t \v \\ \' \"
+        return "string.escape";
       }
+      if (stream.match(/\\[0-7]+\\/)) {
+        // Octal escape sequences: \123\
+        return "string.escape";
+      }
+      if (stream.match(/\\x[0-9a-fA-F]+\\/)) {
+        // Hexadecimal escape sequences: \x1F\
+        return "string.escape";
+      }
+      if (stream.match(/\\u[0-9a-fA-F]{4}/)) {
+        // Unicode escape sequences: \u1234
+        return "string.escape";
+      }
+      if (stream.match(/\\U[0-9a-fA-F]{8}/)) {
+        // Extended Unicode escape sequences: \U12345678
+        return "string.escape";
+      }
+      if (stream.match(/\\\s/)) {
+        // Line continuation (backslash followed by whitespace)
+        return "string.escape";
+      }
+
       stream.next();
-      return "string";
+      return state.stringType === 'atom' ? 'atom' : 'string';
     }
 
     // Start of block comment
@@ -61,13 +88,15 @@ const logtalkStreamParser: StreamParser<any> = {
     if (stream.match(/'/)) {
       state.inString = true;
       state.stringDelim = "'";
-      return "string";
+      state.stringType = 'atom';
+      return "atom";
     }
 
     // Double-quoted term
     if (stream.match(/"/)) {
       state.inString = true;
       state.stringDelim = '"';
+      state.stringType = 'string';
       return "string";
     }
 
