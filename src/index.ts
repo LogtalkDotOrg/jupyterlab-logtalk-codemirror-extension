@@ -73,32 +73,37 @@ const logtalkStreamParser: StreamParser<any> = {
 
     // Entity opening directives
     if (stream.match(/:-\s(?:object|protocol|category|module)(?=\()/)) {
-      return "keyword";
+      return "meta";
     }
 
     // End entity directives
     if (stream.match(/:-\send_(?:object|protocol|category)(?=\.)/)) {
-      return "keyword";
+      return "meta";
     }
 
     // Entity relations
     if (stream.match(/\b(?:complements|extends|instantiates|imports|implements|specializes)(?=\()/)) {
-      return "keyword";
+      return "meta";
     }
 
     // Other directives
     if (stream.match(/:-\s(?:else|endif|built_in|dynamic|synchronized|threaded)(?=\.)/)) {
-      return "keyword";
+      return "meta";
     }
     if (stream.match(/:-\s(?:calls|coinductive|elif|encoding|ensure_loaded|export|if|include|initialization|info|reexport|set_(?:logtalk|prolog)_flag|uses)(?=\()/)) {
-      return "keyword";
+      return "meta";
     }
     if (stream.match(/:-\s(?:alias|info|dynamic|discontiguous|meta_(?:non_terminal|predicate)|mode|multifile|public|protected|private|op|uses|use_module|synchronized)(?=\()/)) {
-      return "keyword";
+      return "meta";
     }
 
     // Message sending operator
     if (stream.match(/::/)) {
+      return "operator";
+    }
+
+    // Explicit module qualification
+    if (stream.match(/:/)) {
       return "operator";
     }
 
@@ -132,7 +137,7 @@ const logtalkStreamParser: StreamParser<any> = {
 
     // Evaluable functions
     if (stream.match(/\b(?:e|pi|div|mod|rem)\b(?![_!(^~])/)) {
-      return "builtin";
+      return "operator";
     }
 
     // Misc operators
@@ -337,6 +342,11 @@ const logtalkStreamParser: StreamParser<any> = {
     // Variables
     if (stream.match(/\b[A-Z_][A-Za-z0-9_]*\b/)) {
       return "variable";
+    }
+
+    // Atoms (lowercase identifiers that aren't keywords or builtins)
+    if (stream.match(/\b[a-z][A-Za-z0-9_]*\b/)) {
+      return "text";
     }
 
     // Skip whitespace
