@@ -1,13 +1,10 @@
 
-import {
-  JupyterFrontEnd,
-  JupyterFrontEndPlugin
-} from '@jupyterlab/application';
-
-import {
-  IEditorLanguageRegistry
-} from '@jupyterlab/codemirror';
-
+import { JupyterFrontEnd, JupyterFrontEndPlugin} from '@jupyterlab/application';
+import { IEditorLanguageRegistry} from '@jupyterlab/codemirror';
+import { ICommandPalette } from '@jupyterlab/apputils';
+import { ILauncher } from '@jupyterlab/launcher';
+import { IFileBrowserFactory } from '@jupyterlab/filebrowser';
+import { LabIcon } from '@jupyterlab/ui-components';
 import { StreamLanguage, StreamParser, LanguageSupport } from '@codemirror/language';
 
 // Comprehensive Logtalk stream parser for CodeMirror 6
@@ -373,7 +370,7 @@ const logtalkStreamParser: StreamParser<any> = {
       return "variable";
     }
 
-    // Skip atoms hat aren't keywords or builtins
+    // Skip atoms that aren't keywords or builtins
     if (stream.match(/\b[a-z][A-Za-z0-9_]*\b/)) {
       return null;
     }
@@ -401,7 +398,7 @@ const logtalkLanguage = {
       streamLanguage.data.of({
         commentTokens: { line: "%", block: { open: "/*", close: "*/" } },
         closeBrackets: { brackets: ["(", "[", "{", "'", '"'] },
-        indentOnInput: /^\s*(?::-\s*(?:object|protocol|category|module)\(|:-\s*end_(?:object|protocol|category)\.|:-|\.)/,
+        indentOnInput: /^\s*(?::-\s(?:object|protocol|category|module)\(.*|:-\send_(?:object|protocol|category)\.|:-|\.)/,
         indentService: (context, pos) => {
           const line = context.state.doc.lineAt(pos);
           const lineText = line.text;
@@ -434,7 +431,7 @@ const logtalkLanguage = {
           const indentSize = 4;
 
           // Current line patterns (de-indent these)
-          if (/^\s*:-\s*end_(?:object|protocol|category)\./.test(lineText)) {
+          if (/^\s*:-\send_(?:object|protocol|category)\./.test(lineText)) {
             // De-indent entity closing directives
             return Math.max(0, prevIndent - indentSize);
           }
@@ -446,12 +443,12 @@ const logtalkLanguage = {
 
           // Previous line patterns (indent after these)
           // Indent after entity opening directives
-          if (/:-\s*(?:object|protocol|category|module)\s*\(/.test(prevLineText)) {
+          if (/:-\s(?:object|protocol|category|module)\(.*/.test(prevLineText)) {
             return prevIndent + indentSize;
           }
 
           // Indent after clause neck operator
-          if (/:-\s*$/.test(prevLineText) || /:-(?![^(]*\)).*[^.]$/.test(prevLineText)) {
+          if (/:-/.test(prevLineText) || /:-(?![^(]*\)).*[^.]$/.test(prevLineText)) {
             return prevIndent + indentSize;
           }
 
@@ -477,10 +474,55 @@ const plugin: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab_logtalk_codemirror_extension:plugin',
   description: 'A JupyterLab extension for Logtalk syntax highlighting.',
   autoStart: true,
-  requires: [IEditorLanguageRegistry],
-  activate: (_app: JupyterFrontEnd, languages: IEditorLanguageRegistry) => {
+  requires: [IEditorLanguageRegistry, ILauncher, IFileBrowserFactory, ICommandPalette],
+  activate: (
+    app: JupyterFrontEnd,
+    languages: IEditorLanguageRegistry,
+    launcher: ILauncher,
+    browserFactory: IFileBrowserFactory,
+    palette: ICommandPalette
+  ) => {
     // Register the Logtalk language
     languages.addLanguage(logtalkLanguage);
+    // Add a launcher item for Logtalk files
+    const { commands } = app;
+    const commandID = 'logtalk:create-file';    
+    const logtalkTextIcon = new LabIcon({
+      name: 'logtalk-text-icon',
+      svgstr: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <text x="12" y="20" font-family="monospace" font-size="24" text-anchor="middle" fill="currentColor">⊨</text>
+      </svg>`
+    });
+    commands.addCommand(commandID, {
+      label: args =>
+        args['isPalette']
+          ? 'New Logtalk File'
+          : 'Logtalk File',
+      caption: 'Create a new Logtalk file',
+      icon: logtalkTextIcon,
+      execute: async () => {
+        const model = await commands.execute('docmanager:new-untitled', {
+          path: browserFactory.tracker.currentWidget?.model.path,
+          type: 'file',
+          ext: 'lgt'
+        });
+        return commands.execute('docmanager:open', {
+          path: model.path,
+          factory: 'Editor'
+        });
+      }
+    });
+    launcher.add({
+      command: commandID,
+      category: 'Other',
+      rank: 1
+    });
+    palette.addItem({
+      command: commandID,
+      args: { isPalette: true },
+      category: 'Other'
+    });
+
     console.log('JupyterLab extension jupyterlab_logtalk_codemirror_extension is activated!');
   }
 };
