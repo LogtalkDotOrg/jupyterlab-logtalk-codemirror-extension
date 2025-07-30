@@ -490,7 +490,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     const logtalkTextIcon = new LabIcon({
       name: 'logtalk-text-icon',
       svgstr: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-        <text x="12" y="20" font-family="monospace" font-size="24" text-anchor="middle" fill="currentColor">⊨</text>
+        <text x="12" y="20" font-family="monospace" font-size="24" text-anchor="middle" fill="CanvasText">⊨</text>
       </svg>`
     });
     commands.addCommand(commandID, {
