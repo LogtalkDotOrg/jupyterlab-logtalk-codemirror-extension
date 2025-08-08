@@ -431,10 +431,9 @@ const logtalkStreamParser: StreamParser<any> = {
   },
 };
 
-
 // Custom Enter key handler that uses our indentation service
 function logtalkEnterHandler(view: any) {
-  console.log('=== Custom Enter handler called ===');
+  //console.log('=== Custom Enter handler called ===');
 
   const { state } = view;
   const pos = state.selection.main.head;
@@ -446,19 +445,19 @@ function logtalkEnterHandler(view: any) {
   const tabSize = state.tabSize || 4;
   const currentIndentColumn = line.text.match(/^(\t*)/)?.[1]?.length || 0;
 
-  console.log('Current line:', `"${line.text}"`);
-  console.log('Current indent level:', currentIndentColumn);
+  //console.log('Current line:', `"${line.text}"`);
+  //console.log('Current indent level:', currentIndentColumn);
 
   // Check if current line should cause indentation or de-indentation
   if (/^:-\s(?:object|protocol|category|module)\(/.test(line.text.trim())) {
     newIndent = '\t'.repeat(currentIndentColumn + 1);
-    console.log('Indenting after entity opening directive');
+    //console.log('Indenting after entity opening directive');
   } else if (/:-\s*$/.test(line.text.trim()) || /:-(?![^(]*\)).*[^.]$/.test(line.text.trim())) {
     newIndent = '\t'.repeat(currentIndentColumn + 1);
-    console.log('Indenting after clause neck operator');
+    //console.log('Indenting after clause neck operator');
   } else if (/[(\[{]\s*$/.test(line.text)) {
     newIndent = '\t'.repeat(currentIndentColumn + 1);
-    console.log('Indenting after opening bracket');
+    //console.log('Indenting after opening bracket');
   } else if (/.*\.$/.test(line.text.trim()) && currentIndentColumn > 0) {
     // Check if this is the end of a rule by looking for :- in previous lines
     let isEndOfRule = false;
@@ -483,22 +482,22 @@ function logtalkEnterHandler(view: any) {
     if (isEndOfRule) {
       // De-indent after rule termination (period at end of line)
       newIndent = '\t'.repeat(Math.max(0, currentIndentColumn - 1));
-      console.log('De-indenting after rule termination');
+      //console.log('De-indenting after rule termination');
     } else {
       // This is a fact, maintain current indentation
       newIndent = '\t'.repeat(currentIndentColumn);
-      console.log('Maintaining indentation after fact');
+      //console.log('Maintaining indentation after fact');
     }
   } else if (/^:-\send_(?:object|protocol|category)\.$/.test(line.text.trim()) && currentIndentColumn > 0) {
     // De-indent after entity closing directives
     newIndent = '\t'.repeat(Math.max(0, currentIndentColumn - 1));
-    console.log('De-indenting after entity closing directive');
+    //console.log('De-indenting after entity closing directive');
   } else {
     newIndent = '\t'.repeat(currentIndentColumn);
-    console.log('Maintaining current indentation');
+    //console.log('Maintaining current indentation');
   }
 
-  console.log('New indent:', `"${newIndent}"`);
+  //console.log('New indent:', `"${newIndent}"`);
 
   // Insert newline with calculated indentation
   view.dispatch({
@@ -511,8 +510,6 @@ function logtalkEnterHandler(view: any) {
 
   return true;
 }
-
-
 
 // Create the Logtalk language definition for JupyterLab 4
 const logtalkLanguage = {
