@@ -1,6 +1,6 @@
 # JupyterLab Logtalk CodeMirror Extension
 
-A JupyterLab 4.x extension providing a Logtalk CodeMirror mode for syntax highlighting plus launcher and command palette entries for creating new Logtalk files.
+A JupyterLab 4.x extension providing a Logtalk CodeMirror mode for syntax highlighting and automatic indentation plus launcher and command palette entries for creating new Logtalk files.
 
 See also the [Jupyter kernel for Logtalk](https://github.com/LogtalkDotOrg/logtalk-jupyter-kernel).
 

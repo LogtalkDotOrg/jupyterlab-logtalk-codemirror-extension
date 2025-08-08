@@ -5,7 +5,10 @@ import { ICommandPalette } from '@jupyterlab/apputils';
 import { ILauncher } from '@jupyterlab/launcher';
 import { IFileBrowserFactory } from '@jupyterlab/filebrowser';
 import { LabIcon } from '@jupyterlab/ui-components';
-import { StreamLanguage, StreamParser, LanguageSupport } from '@codemirror/language';
+import { StreamLanguage, StreamParser, LanguageSupport, indentUnit, indentOnInput } from '@codemirror/language';
+import { keymap } from '@codemirror/view';
+import { indentWithTab } from '@codemirror/commands';
+import { Prec } from '@codemirror/state';
 
 // Comprehensive Logtalk stream parser for CodeMirror 6
 // Based on the official Logtalk language support from LogtalkDotOrg/logtalk3
@@ -15,11 +18,26 @@ const logtalkStreamParser: StreamParser<any> = {
       inComment: false,
       inString: false,
       stringDelim: null,
-      stringType: null  // 'atom' for quoted atoms, 'string' for double-quoted terms
+      stringType: null,  // 'atom' for quoted atoms, 'string' for double-quoted terms
+      inRule: false,     // Track if we're inside a rule (after :- and before .)
+      lastLine: '',      // Track the last processed line for indentation context
+      currentLine: ''    // Track the current line being processed
     };
   },
 
   token(stream, state) {
+    // Track line changes for indentation context
+    if (stream.sol()) {
+      // Start of line - update lastLine with previous line content
+      state.lastLine = state.currentLine || '';
+      state.currentLine = '';
+    }
+
+    // Accumulate current line content
+    if (!state.currentLine) {
+      state.currentLine = '';
+    }
+
     // Handle block comments
     if (state.inComment) {
       if (stream.match(/\*\//)) {
@@ -166,8 +184,29 @@ const logtalkStreamParser: StreamParser<any> = {
       return "operator";
     }
 
-    // Misc operators
-    if (stream.match(/:-|!|\\+|[,;]|-->|->|=|\\=|\.|\.\.|\^|\bas\b|\bis\b/)) {
+    // Clause neck operator (rule indicator)
+    if (stream.match(/:-/)) {
+      // Check if this is a directive (starts at beginning of line) or a rule neck
+      if (stream.column() === 2) {
+        // This is likely a directive like :-object(...), don't set inRule
+      } else {
+        // This is a rule neck operator, set inRule to true
+        state.inRule = true;
+      }
+      return "operator";
+    }
+
+    // Period (clause terminator)
+    if (stream.match(/\./)) {
+      // If we were in a rule, we're no longer in one
+      if (state.inRule) {
+        state.inRule = false;
+      }
+      return "operator";
+    }
+
+    // Other misc operators
+    if (stream.match(/!|\\+|[,;]|-->|->|=|\\=|\.\.|\^|\bas\b|\bis\b/)) {
       return "operator";
     }
 
@@ -381,10 +420,99 @@ const logtalkStreamParser: StreamParser<any> = {
     }
 
     // Default: consume one character
-    stream.next();
+    const char = stream.next();
+
+    // Track current line content for indentation
+    if (char && !stream.eol()) {
+      state.currentLine += char;
+    }
+
     return null;
-  }
+  },
 };
+
+
+// Custom Enter key handler that uses our indentation service
+function logtalkEnterHandler(view: any) {
+  console.log('=== Custom Enter handler called ===');
+
+  const { state } = view;
+  const pos = state.selection.main.head;
+  const doc = state.doc;
+  const line = doc.lineAt(pos);
+
+  // Calculate indentation for the new line by looking at current line
+  let newIndent = '';
+  const tabSize = state.tabSize || 4;
+  const currentIndentColumn = line.text.match(/^(\t*)/)?.[1]?.length || 0;
+
+  console.log('Current line:', `"${line.text}"`);
+  console.log('Current indent level:', currentIndentColumn);
+
+  // Check if current line should cause indentation or de-indentation
+  if (/^:-\s(?:object|protocol|category|module)\(/.test(line.text.trim())) {
+    newIndent = '\t'.repeat(currentIndentColumn + 1);
+    console.log('Indenting after entity opening directive');
+  } else if (/:-\s*$/.test(line.text.trim()) || /:-(?![^(]*\)).*[^.]$/.test(line.text.trim())) {
+    newIndent = '\t'.repeat(currentIndentColumn + 1);
+    console.log('Indenting after clause neck operator');
+  } else if (/[(\[{]\s*$/.test(line.text)) {
+    newIndent = '\t'.repeat(currentIndentColumn + 1);
+    console.log('Indenting after opening bracket');
+  } else if (/.*\.$/.test(line.text.trim()) && currentIndentColumn > 0) {
+    // Check if this is the end of a rule by looking for :- in previous lines
+    let isEndOfRule = false;
+
+    // Look back through previous lines to see if we're in a rule
+    for (let i = line.number - 1; i >= 1; i--) {
+      const prevLine = doc.line(i);
+      const prevText = prevLine.text.trim();
+
+      // If we find a period, we've reached the end of a previous clause
+      if (prevText.endsWith('.')) {
+        break;
+      }
+
+      // If we find :- that's not a directive, we're ending a rule
+      if (/:-/.test(prevText) && !/^:-\s(?:object|protocol|category|module|end_|else|endif|built_in|dynamic|synchronized|threaded|calls|coinductive|elif|encoding|ensure_loaded|export|if|include|initialization|info|reexport|set_|uses|alias|discontiguous|meta_|mode|multifile|public|protected|private|op|use_module)/.test(prevText)) {
+        isEndOfRule = true;
+        break;
+      }
+    }
+
+    if (isEndOfRule) {
+      // De-indent after rule termination (period at end of line)
+      newIndent = '\t'.repeat(Math.max(0, currentIndentColumn - 1));
+      console.log('De-indenting after rule termination');
+    } else {
+      // This is a fact, maintain current indentation
+      newIndent = '\t'.repeat(currentIndentColumn);
+      console.log('Maintaining indentation after fact');
+    }
+  } else if (/^:-\send_(?:object|protocol|category)\.$/.test(line.text.trim()) && currentIndentColumn > 0) {
+    // De-indent after entity closing directives
+    newIndent = '\t'.repeat(Math.max(0, currentIndentColumn - 1));
+    console.log('De-indenting after entity closing directive');
+  } else {
+    newIndent = '\t'.repeat(currentIndentColumn);
+    console.log('Maintaining current indentation');
+  }
+
+  console.log('New indent:', `"${newIndent}"`);
+
+  // Insert newline with calculated indentation
+  view.dispatch({
+    changes: {
+      from: pos,
+      insert: '\n' + newIndent
+    },
+    selection: { anchor: pos + 1 + newIndent.length }
+  });
+
+  return true;
+}
+
+
 
 // Create the Logtalk language definition for JupyterLab 4
 const logtalkLanguage = {
@@ -395,76 +523,16 @@ const logtalkLanguage = {
   load: async (): Promise<LanguageSupport> => {
     const streamLanguage = StreamLanguage.define(logtalkStreamParser);
     return new LanguageSupport(streamLanguage, [
+      indentUnit.of('\t'), // Use tabs for indentation
+      indentOnInput(), // Enable automatic re-indentation on input
+      Prec.high(keymap.of([
+        { key: "Enter", run: logtalkEnterHandler },
+        indentWithTab
+      ])),
       streamLanguage.data.of({
         commentTokens: { line: "%", block: { open: "/*", close: "*/" } },
         closeBrackets: { brackets: ["(", "[", "{", "'", '"'] },
-        indentOnInput: /^\s*(?::-\s(?:object|protocol|category|module)\(.*|:-\send_(?:object|protocol|category)\.|:-|\.)/,
-        indentService: (context, pos) => {
-          const line = context.state.doc.lineAt(pos);
-          const lineText = line.text;
-
-          // If this is the first line, no indentation
-          if (line.number === 1) {
-            return 0;
-          }
-
-          // Get the previous non-empty line
-          let prevLineNumber = line.number - 1;
-          let prevLine = null;
-          let prevLineText = '';
-
-          while (prevLineNumber >= 1) {
-            prevLine = context.state.doc.line(prevLineNumber);
-            prevLineText = prevLine.text.trim();
-            if (prevLineText) break;
-            prevLineNumber--;
-          }
-
-          // If no previous line found, return 0
-          if (!prevLineText || !prevLine) {
-            return 0;
-          }
-
-          // Calculate current indentation of previous line
-          const prevIndentMatch = prevLine.text.match(/^(\s*)/);
-          const prevIndent = prevIndentMatch ? prevIndentMatch[1].length : 0;
-          const indentSize = 4;
-
-          // Current line patterns (de-indent these)
-          if (/^\s*:-\send_(?:object|protocol|category)\./.test(lineText)) {
-            // De-indent entity closing directives
-            return Math.max(0, prevIndent - indentSize);
-          }
-
-          if (/^\s*\.(?:\s|$)/.test(lineText)) {
-            // De-indent lines that start with period (clause termination)
-            return Math.max(0, prevIndent - indentSize);
-          }
-
-          // Previous line patterns (indent after these)
-          // Indent after entity opening directives
-          if (/:-\s(?:object|protocol|category|module)\(.*/.test(prevLineText)) {
-            return prevIndent + indentSize;
-          }
-
-          // Indent after clause neck operator
-          if (/:-/.test(prevLineText) || /:-(?![^(]*\)).*[^.]$/.test(prevLineText)) {
-            return prevIndent + indentSize;
-          }
-
-          // Indent after opening parentheses, brackets, or braces at end of line
-          if (/[(\[{]\s*$/.test(prevLineText)) {
-            return prevIndent + indentSize;
-          }
-
-          // De-indent after closing parentheses, brackets, or braces at start of current line
-          if (/^\s*[)\]}]/.test(lineText)) {
-            return Math.max(0, prevIndent - indentSize);
-          }
-
-          // Default: maintain previous line's indentation
-          return prevIndent;
-        }
+        indentOnInput: /(?:^:-\s(?:object|protocol|category|module)\(.*$|^:-\send_(?:object|protocol|category)\.$|\s*.*\s:-$|.*\.$)/
       })
     ]);
   }
